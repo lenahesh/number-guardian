@@ -3,180 +3,359 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>שומר המספרים</title>
+    <title>שומר המספרים - החזרת האור לממלכה</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&family=Heebo:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --primary: #eab308;
-            --text-white: #ffffff;
-            --slate-800: #1e293b;
-            --slate-900: #0f172a;
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body, html {
-            font-family: system-ui, -apple-system, sans-serif;
-            margin: 0; padding: 0;
-            height: 100%; width: 100%;
+            font-family: 'Assistant', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
             overflow: hidden;
-            background-color: var(--bg-color);
-            color: var(--text-white);
+            background: #0f172a;
+            color: white;
             user-select: none;
             touch-action: manipulation;
         }
-        #game-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-        .math-font { direction: ltr; display: inline-block; font-family: Arial, sans-serif; }
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 20px; z-index: 10;
+        .math-font {
+            direction: ltr;
+            display: inline-block;
+            font-family: sans-serif;
         }
         .castle-bg {
-            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                        url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=1000');
-            background-size: cover; background-position: center;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover;
+            background-position: center;
         }
-        #nav-header {
-            display: none; width: 100%; padding: 10px;
-            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            justify-content: space-between; align-items: center; z-index: 100;
+        .transition-all { transition: all 0.3s ease; }
+        .fairy { animation: float 3s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
         }
-        .nav-buttons { display: flex; gap: 5px; }
-        .nav-btn {
-            background: transparent; color: rgba(255, 255, 255, 0.7);
-            border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 14px;
+        .scale-balance { transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        .nav-btn { @apply px-2 py-1 rounded-lg text-xs md:text-sm transition-all hover:bg-white/20; }
+        .nav-active { @apply bg-yellow-500 text-slate-900 font-bold; }
+        
+        /* Fix for Google Sites/iFrame embedding */
+        #game-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
-        .nav-btn.active { background: var(--primary); color: var(--slate-900); font-weight: bold; }
-        .btn-main {
-            background-color: var(--primary); color: var(--slate-900); border: none;
-            padding: 15px 40px; font-size: 24px; font-weight: 900; border-radius: 50px;
-            cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.2s; margin-top: 20px;
+        .screen {
+            z-index: 10;
         }
-        .btn-main:active { transform: scale(0.95); }
-        #game-world { display: none; flex: 1; position: relative; z-index: 20; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
-        #progress-container { display: none; width: 100%; height: 6px; background: #334155; z-index: 90; }
-        #progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
-        .fairy { font-size: 50px; margin: 10px; }
-        .grid-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 20px; }
-        .opt-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: white; color: #0f172a; padding: 30px; border-radius: 25px; text-align: center; max-width: 350px; width: 100%; }
-        .hidden { display: none !important; }
+        #nav-header:not(.hidden) {
+            display: flex !important;
+        }
     </style>
 </head>
-<body>
-    <div id="game-container">
-        <div id="nav-header">
-            <button onclick="location.reload()" style="background:none; border:none; color:var(--primary); font-weight:bold; cursor:pointer;">🏰 בית</button>
-            <div class="nav-buttons">
-                <button onclick="switchLevel(0)" class="nav-btn" id="nb-0">יער</button>
-                <button onclick="switchLevel(1)" class="nav-btn" id="nb-1">גשר</button>
-                <button onclick="switchLevel(2)" class="nav-btn" id="nb-2">מכרה</button>
-                <button onclick="switchLevel(3)" class="nav-btn" id="nb-3">מקדש</button>
-            </div>
-            <div style="background:rgba(234,179,8,0.2); padding:2px 10px; border-radius:15px; border:1px solid var(--primary);">
-                <span id="points-display">0</span> ✨
-            </div>
-        </div>
-        <div id="progress-container"><div id="progress-bar"></div></div>
-        <div id="screen-start" class="screen castle-bg">
-            <h1 style="font-size: 45px; margin-bottom: 10px; color: var(--primary);">שומר המספרים</h1>
-            <p style="font-size: 18px; max-width: 300px;">עזרו לשומר להחזיר את האור לממלכה!</p>
-            <button class="btn-main" onclick="startGame()">התחל משחק</button>
-        </div>
-        <div id="game-world"></div>
-        <div id="success-modal" class="modal">
-            <div class="modal-content">
-                <div style="font-size: 50px;">🌟</div>
-                <h2 id="modal-title">כל הכבוד!</h2>
-                <p id="modal-msg"></p>
-                <button onclick="handleModalAction()" id="modal-btn" style="width:100%; padding:12px; background:#0f172a; color:white; border-radius:10px; border:none; font-weight:bold; cursor:pointer; margin-top:15px;">המשך</button>
+<body class="bg-slate-900">
+
+    <!-- Game Container -->
+    <div id="game-container" class="relative w-full max-w-4xl mx-auto shadow-2xl overflow-hidden md:rounded-xl">
+        
+        <!-- Navigation Header -->
+        <div id="nav-header" class="hidden w-full p-2 bg-black/60 backdrop-blur-md border-b border-white/10 z-50 flex-wrap justify-between items-center gap-2">
+            <button onclick="goHome()" class="text-lg font-bold text-yellow-400 flex items-center gap-1">
+                🏰 <span>בית</span>
+            </button>
+            <nav class="flex gap-1 overflow-x-auto">
+                <button id="nav-0" onclick="switchLevel(0)" class="nav-btn">יער</button>
+                <button id="nav-1" onclick="switchLevel(1)" class="nav-btn">גשר</button>
+                <button id="nav-2" onclick="switchLevel(2)" class="nav-btn">מכרה</button>
+                <button id="nav-3" onclick="switchLevel(3)" class="nav-btn">מקדש</button>
+            </nav>
+            <div class="bg-yellow-500/20 px-2 py-1 rounded-full border border-yellow-500/50 flex items-center gap-2">
+                <span class="text-xs text-yellow-400">✨</span>
+                <span id="points-display" class="font-bold text-sm">0</span>
             </div>
         </div>
+
+        <!-- Progress Bar -->
+        <div id="progress-container" class="hidden w-full h-1.5 bg-slate-800 z-50">
+            <div id="progress-bar" class="h-full bg-yellow-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="relative flex-1 w-full h-full overflow-hidden bg-slate-900">
+            <!-- Screens -->
+            <div id="screen-start" class="screen absolute inset-0 flex flex-col items-center justify-center text-center p-6 castle-bg">
+                <h1 class="text-4xl md:text-6xl font-black mb-4 text-yellow-400 drop-shadow-2xl">שומר המספרים</h1>
+                <p class="text-lg md:text-xl mb-8 max-w-lg">עזרו לשומר להחזיר את האור לממלכה!</p>
+                <button id="btn-start" onclick="startGame()" class="relative z-30 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black px-10 py-4 rounded-full text-xl shadow-xl transition-all transform hover:scale-105 active:scale-95">
+                    התחל במסע האור
+                </button>
+            </div>
+
+            <!-- Level Area -->
+            <div id="game-world" class="hidden absolute inset-0 z-10">
+                <!-- Content will be injected here -->
+            </div>
+
+            <!-- Helper Owl -->
+            <div id="owl-assistant" class="absolute bottom-4 left-4 z-40 transition-all transform translate-y-40 opacity-0 pointer-events-none">
+                <div class="bg-white text-slate-900 p-4 rounded-2xl relative shadow-xl max-w-[180px]">
+                    <p id="owl-text" class="text-sm font-bold"></p>
+                    <div class="absolute -bottom-2 left-6 w-4 h-4 bg-white rotate-45"></div>
+                </div>
+                <div class="text-4xl mt-2 ml-4">🦉</div>
+            </div>
+
+            <!-- Hint Overlay -->
+            <div id="hint-overlay" class="hidden absolute inset-0 bg-black/90 z-[100] flex items-center justify-center p-6">
+                <div class="bg-slate-800 p-6 rounded-2xl border-2 border-blue-500 text-center w-full max-w-md">
+                    <h3 class="text-xl font-bold mb-4">ייצוג בלבני עשר</h3>
+                    <div id="hint-visual" class="flex flex-wrap justify-center gap-2 mb-6 min-h-[80px] items-center"></div>
+                    <button onclick="closeHint()" class="bg-blue-600 px-6 py-2 rounded-full font-bold">הבנתי!</button>
+                </div>
+            </div>
+
+            <!-- Success Modal -->
+            <div id="success-modal" class="hidden absolute inset-0 bg-black/70 backdrop-blur-sm z-[110] flex items-center justify-center p-6">
+                <div class="bg-white text-slate-900 p-8 rounded-3xl text-center shadow-2xl max-w-sm w-full">
+                    <div id="success-emoji" class="text-5xl mb-4">🌟</div>
+                    <h2 id="success-title" class="text-2xl font-black mb-2">מצוין!</h2>
+                    <p id="success-msg" class="text-base mb-6"></p>
+                    <button onclick="handleModalAction()" id="next-btn" class="w-full bg-slate-900 text-white py-3 rounded-full font-bold active:scale-95"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hint Button -->
+        <button id="hint-trigger" onclick="showHint()" class="hidden absolute bottom-6 right-6 bg-blue-600 w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-2xl z-[60] border-2 border-white/20 active:scale-90">
+            💡
+        </button>
     </div>
+
     <script>
-        let state = { level: 0, points: 0, exerciseNum: 1, targetValue: 0 };
+        let state = {
+            level: 0,
+            points: 0,
+            exerciseNum: 1,
+            targetValue: 0,
+            totalExercises: 10
+        };
+
+        const levels = [
+            { title: "יער האחדות", type: "subitizing", description: "כמה פיות מופיעות?" },
+            { title: "גשר העשרות", type: "sequences", description: "השלימו את המספר החסר." },
+            { title: "מכרה המאות", type: "decomposition", description: "הרכיבו את המספר המדויק." },
+            { title: "מקדש האומדן", type: "comparison", description: "מי המספר הגדול יותר?" }
+        ];
+
         function startGame() {
             document.getElementById('screen-start').classList.add('hidden');
-            document.getElementById('nav-header').style.display = 'flex';
-            document.getElementById('progress-container').style.display = 'block';
-            document.getElementById('game-world').style.display = 'flex';
+            document.getElementById('nav-header').classList.remove('hidden');
+            document.getElementById('progress-container').classList.remove('hidden');
+            document.getElementById('hint-trigger').classList.remove('hidden');
+            document.getElementById('game-world').classList.remove('hidden');
+            state.level = 0;
+            state.exerciseNum = 1;
             loadLevel();
         }
-        function switchLevel(lvl) { state.level = lvl; state.exerciseNum = 1; loadLevel(); }
+
+        function goHome() {
+            location.reload(); // Simplest way to ensure clean state in iFrame
+        }
+
+        function switchLevel(lvl) {
+            state.level = lvl;
+            state.exerciseNum = 1;
+            loadLevel();
+        }
+
         function loadLevel() {
             const world = document.getElementById('game-world');
-            document.getElementById('progress-bar').style.width = (state.exerciseNum - 1) * 10 + '%';
-            for(let i=0; i<4; i++) { document.getElementById('nb-'+i).className = (i === state.level) ? 'nav-btn active' : 'nav-btn'; }
+            const levelData = levels[state.level];
+            
+            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+                btn.className = (i === state.level) ? "nav-btn nav-active" : "nav-btn text-white/70";
+            });
+
+            const progress = ((state.exerciseNum - 1) / state.totalExercises) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
             world.innerHTML = '';
-            if (state.level === 0) setupLevel0(world);
-            else if (state.level === 1) setupLevel1(world);
-            else if (state.level === 2) setupLevel2(world);
-            else setupLevel3(world);
+            if (state.level === 0) setupSubitizing(world);
+            else if (state.level === 1) setupSequences(world);
+            else if (state.level === 2) setupDecomposition(world);
+            else if (state.level === 3) setupComparison(world);
+
+            if (state.exerciseNum === 1) showOwl(levelData.description);
         }
-        function setupLevel0(container) {
-            state.targetValue = Math.floor(Math.random() * 6) + 3;
-            let fairies = '<div style="display:flex; flex-wrap:wrap; justify-content:center;">';
-            for(let i=0; i<state.targetValue; i++) fairies += '<div class="fairy">🧚</div>';
-            fairies += '</div>';
-            container.innerHTML = fairies;
-            setTimeout(() => {
-                container.innerHTML = '<h2 style="margin-bottom:20px;">כמה פיות היו?</h2>';
-                const grid = document.createElement('div');
-                grid.className = 'grid-options';
-                for(let i=1; i<=10; i++) {
-                    const btn = document.createElement('button');
-                    btn.className = 'opt-btn math-font'; btn.innerText = i;
-                    btn.onclick = () => check(i);
-                    grid.appendChild(btn);
-                }
-                container.appendChild(grid);
-            }, 1500);
-        }
-        function setupLevel1(container) {
-            const start = Math.floor(Math.random() * 50);
-            const missing = Math.floor(Math.random() * 3) + 1;
-            state.targetValue = start + (missing * 10);
-            let html = '<div style="display:flex; gap:10px; margin-bottom:30px;">';
-            for(let i=0; i<5; i++) {
-                const val = start + (i*10);
-                html += `<div style="width:50px; height:80px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; background:${i===missing?'#334155':'#2563eb'}; border:${i===missing?'2px dashed white':''}" class="math-font">${i===missing?'?':val}</div>`;
+
+        function setupSubitizing(container) {
+            state.targetValue = Math.floor(Math.random() * 8) + 2; 
+            container.className = "absolute inset-0 bg-emerald-900/40 flex flex-col items-center justify-center";
+            
+            const forest = document.createElement('div');
+            forest.className = "flex flex-wrap justify-center items-center gap-4 px-4 transition-opacity duration-500";
+            for(let i=0; i<state.targetValue; i++) {
+                const fairy = document.createElement('div');
+                fairy.className = "fairy text-4xl";
+                fairy.innerText = "🧚";
+                forest.appendChild(fairy);
             }
-            html += '</div>';
-            const options = [state.targetValue, state.targetValue+10, state.targetValue-10].sort(()=>Math.random()-0.5);
-            html += '<div style="display:flex; gap:10px;">';
-            options.forEach(o => { if(o >= 0) html += `<button onclick="check(${o})" class="opt-btn math-font" style="background:white; color:black; padding:10px 25px; border-radius:30px;">${o}</button>`; });
-            html += '</div>';
-            container.innerHTML = html;
+            container.appendChild(forest);
+
+            setTimeout(() => {
+                forest.classList.add('opacity-0');
+                setTimeout(() => {
+                    forest.innerHTML = '';
+                    forest.className = "text-center opacity-100 p-4";
+                    forest.innerHTML = `
+                        <p class="text-xl mb-4">כמה היו?</p>
+                        <div class="grid grid-cols-5 gap-2 max-w-xs mx-auto">
+                            ${[1,2,3,4,5,6,7,8,9,10].map(n => `<button onclick="checkSubitizing(${n})" class="bg-white/10 p-3 rounded-lg font-bold math-font">${n}</button>`).join('')}
+                        </div>
+                    `;
+                }, 500);
+            }, 1800);
         }
-        function setupLevel2(container) {
-            state.targetValue = Math.floor(Math.random() * 150) + 20;
-            let current = 0;
-            container.innerHTML = `<h2 style="margin-bottom:10px;">חצבו: <span class="math-font" style="color:var(--primary)">${state.targetValue}</span></h2><div id="cur-val" class="math-font" style="font-size:40px; background:rgba(255,255,255,0.1); padding:10px 30px; border-radius:15px; margin-bottom:20px;">0</div><div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:20px;"><button onclick="window.addVal(100)" style="background:#2563eb; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold;">💰 100</button><button onclick="window.addVal(10)" style="background:#16a34a; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold;">📦 10</button><button onclick="window.addVal(1)" style="background:#dc2626; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold;">💎 1</button></div><button onclick="window.checkDec()" class="btn-main" style="font-size:18px; padding:10px 30px;">פתח דלת!</button>`;
-            window.addVal = (v) => { current += v; document.getElementById('cur-val').innerText = current; };
-            window.checkDec = () => { if(current === state.targetValue) handleCorrect(); else { current=0; document.getElementById('cur-val').innerText=0; } };
+
+        function checkSubitizing(val) {
+            if (val === state.targetValue) handleCorrect();
+            else { showOwl("נסה שוב!"); loadLevel(); }
         }
-        function setupLevel3(container) {
-            const v1 = Math.floor(Math.random() * 900) + 100;
-            const v2 = v1 + (Math.random() > 0.5 ? 10 : -10);
+
+        function setupSequences(container) {
+            const start = Math.floor(Math.random() * 60);
+            const missingIdx = Math.floor(Math.random() * 3) + 1;
+            const sequence = [start, start+10, start+20, start+30, start+40];
+            state.targetValue = sequence[missingIdx];
+            container.className = "absolute inset-0 bg-blue-900/20 flex flex-col items-center justify-center p-4";
+            
+            let bridge = '<div class="flex gap-1 mb-8">';
+            sequence.forEach((num, i) => {
+                bridge += `<div class="w-12 h-20 md:w-20 md:h-32 ${i===missingIdx?'bg-slate-800 border-2 border-dashed':'bg-blue-600'} flex items-center justify-center rounded-t-lg font-bold math-font">${i===missingIdx?'?':num}</div>`;
+            });
+            bridge += '</div>';
+            
+            const options = [state.targetValue - 10, state.targetValue, state.targetValue + 10].filter(n => n>=0).sort(() => Math.random()-0.5);
+            let btns = '<div class="flex gap-2">';
+            options.forEach(o => btns += `<button onclick="checkSequence(${o})" class="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold math-font text-xl">${o}</button>`);
+            btns += '</div>';
+
+            container.innerHTML = bridge + btns;
+        }
+
+        function checkSequence(val) {
+            if(val === state.targetValue) handleCorrect();
+            else showOwl("שימו לב לעשרות!");
+        }
+
+        function setupDecomposition(container) {
+            const h = Math.floor(Math.random() * 3);
+            const t = Math.floor(Math.random() * 6);
+            const u = Math.floor(Math.random() * 9);
+            state.targetValue = (h * 100) + (t * 10) + u;
+            if (state.targetValue === 0) state.targetValue = 105;
+            let current = { h:0, t:0, u:0 };
+
+            container.className = "absolute inset-0 bg-amber-900/10 flex flex-col items-center justify-center p-4";
+            container.innerHTML = `
+                <h2 class="text-3xl font-black mb-4">חצבו: <span class="math-font text-yellow-400">${state.targetValue}</span></h2>
+                <div class="flex gap-2 mb-6">
+                    <div class="bg-blue-600/20 p-2 rounded">מ: <span id="v-h" class="math-font">0</span></div>
+                    <div class="bg-green-600/20 p-2 rounded">ע: <span id="v-t" class="math-font">0</span></div>
+                    <div class="bg-red-600/20 p-2 rounded">א: <span id="v-u" class="math-font">0</span></div>
+                </div>
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <button onclick="window.addPart('h')" class="bg-blue-600 p-3 rounded-xl text-xs">💰 שק 100</button>
+                    <button onclick="window.addPart('t')" class="bg-green-600 p-3 rounded-xl text-xs">📦 צרור 10</button>
+                    <button onclick="window.addPart('u')" class="bg-red-600 p-3 rounded-xl text-xs">💎 אבן 1</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.resetDec()" class="bg-slate-700 px-4 py-2 rounded-full">אפס</button>
+                    <button onclick="window.checkDec()" class="bg-yellow-500 text-slate-900 px-8 py-2 rounded-full font-bold">פתח!</button>
+                </div>
+            `;
+            window.addPart = (k) => { current[k]++; document.getElementById(`v-${k}`).innerText = current[k]; };
+            window.resetDec = () => { current = {h:0, t:0, u:0}; ['h','t','u'].forEach(k=>document.getElementById(`v-${k}`).innerText=0); };
+            window.checkDec = () => {
+                if (current.h*100 + current.t*10 + current.u === state.targetValue) handleCorrect();
+                else showOwl("הכמות לא מדויקת");
+            };
+        }
+
+        function setupComparison(container) {
+            const v1 = Math.floor(Math.random()*500)+100;
+            const v2 = v1 + (Math.random()>0.5?10:-10);
             state.targetValue = Math.max(v1, v2);
-            container.innerHTML = `<p style="font-size:20px; margin-bottom:30px;">מי המספר הגדול יותר?</p><div style="display:flex; gap:30px;"><button onclick="check(${v1})" class="math-font" style="width:100px; height:100px; border-radius:50%; border:4px solid #475569; background:#1e293b; color:white; font-size:24px; font-weight:bold; cursor:pointer;">${v1}</button><button onclick="check(${v2})" class="math-font" style="width:100px; height:100px; border-radius:50%; border:4px solid #475569; background:#1e293b; color:white; font-size:24px; font-weight:bold; cursor:pointer;">${v2}</button></div>`;
+            container.className = "absolute inset-0 flex flex-col items-center justify-center p-4";
+            container.innerHTML = `
+                <div id="scale" class="scale-balance flex justify-between w-full max-w-xs mb-12 border-b-4 border-slate-600 pb-2">
+                    <button onclick="checkComp(${v1})" class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center font-bold math-font border-4 border-slate-500">${v1}</button>
+                    <button onclick="checkComp(${v2})" class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center font-bold math-font border-4 border-slate-500">${v2}</button>
+                </div>
+                <p class="font-bold">לחצו על המספר הגדול יותר</p>
+            `;
+            window.checkComp = (v) => {
+                const s = document.getElementById('scale');
+                s.style.transform = v1 > v2 ? "rotate(-10deg)" : "rotate(10deg)";
+                setTimeout(() => { if(v===state.targetValue) handleCorrect(); else { showOwl("נסה שוב"); s.style.transform="rotate(0)"; }}, 500);
+            };
         }
-        function check(v) { if (v === state.targetValue) handleCorrect(); else loadLevel(); }
+
         function handleCorrect() {
-            state.points += 10; document.getElementById('points-display').innerText = state.points;
-            const isEnd = state.exerciseNum >= 10;
-            document.getElementById('modal-msg').innerText = isEnd ? "סיימת את כל המשימות באזור זה!" : "התשובה נכונה!";
-            document.getElementById('modal-btn').innerText = isEnd ? (state.level < 3 ? "עבור לאזור הבא" : "סיים משחק") : "לתרגיל הבא";
-            document.getElementById('success-modal').style.display = 'flex';
+            state.points += 15;
+            document.getElementById('points-display').innerText = state.points;
+            if (state.exerciseNum < state.totalExercises) {
+                state.exerciseNum++;
+                showModal(false);
+            } else {
+                showModal(true);
+            }
         }
+
+        function showModal(isLevelEnd) {
+            const m = document.getElementById('success-modal');
+            const msg = document.getElementById('success-msg');
+            const btn = document.getElementById('next-btn');
+            m.classList.remove('hidden');
+            if (isLevelEnd) {
+                msg.innerText = `סיימת את ${levels[state.level].title}!`;
+                btn.innerText = state.level < 3 ? "לשלב הבא" : "סיים משחק";
+            } else {
+                msg.innerText = "נכון מאוד!";
+                btn.innerText = "לתרגיל הבא";
+            }
+        }
+
         function handleModalAction() {
-            document.getElementById('success-modal').style.display = 'none';
-            if (state.exerciseNum >= 10) {
+            document.getElementById('success-modal').classList.add('hidden');
+            if (state.exerciseNum > state.totalExercises || document.getElementById('success-msg').innerText.includes("סיימת")) {
                 if (state.level < 3) { state.level++; state.exerciseNum = 1; loadLevel(); }
-                else location.reload();
-            } else { state.exerciseNum++; loadLevel(); }
+                else goHome();
+            } else loadLevel();
         }
+
+        function showOwl(t) {
+            const o = document.getElementById('owl-assistant');
+            document.getElementById('owl-text').innerText = t;
+            o.classList.remove('translate-y-40', 'opacity-0');
+            setTimeout(() => o.classList.add('translate-y-40', 'opacity-0'), 3000);
+        }
+
+        function showHint() {
+            if (state.points < 5) return showOwl("צריך 5 נקודות");
+            state.points -= 5;
+            document.getElementById('points-display').innerText = state.points;
+            const v = state.targetValue;
+            const h = Math.floor(v/100), t = Math.floor((v%100)/10), u = v%10;
+            const vis = document.getElementById('hint-visual');
+            vis.innerHTML = '';
+            for(let i=0; i<h; i++) vis.innerHTML += '<div class="w-8 h-8 bg-blue-500 rounded-sm"></div>';
+            for(let i=0; i<t; i++) vis.innerHTML += '<div class="w-2 h-8 bg-green-500 rounded-sm"></div>';
+            for(let i=0; i<u; i++) vis.innerHTML += '<div class="w-2 h-2 bg-red-500 rounded-sm"></div>';
+            document.getElementById('hint-overlay').classList.remove('hidden');
+        }
+
+        function closeHint() { document.getElementById('hint-overlay').classList.add('hidden'); }
     </script>
 </body>
 </html>
