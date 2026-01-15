@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>שומר המספרים</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --primary: #eab308;
+            --text-white: #ffffff;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body, html {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0; padding: 0;
+            height: 100%; width: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-white);
+            user-select: none;
+            touch-action: manipulation;
+        }
+        #game-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+        .math-font { direction: ltr; display: inline-block; font-family: Arial, sans-serif; }
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 20px; z-index: 10;
+        }
+        .castle-bg {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
+                        url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover; background-position: center;
+        }
+        #nav-header {
+            display: none; width: 100%; padding: 10px;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            justify-content: space-between; align-items: center; z-index: 100;
+        }
+        .nav-buttons { display: flex; gap: 5px; }
+        .nav-btn {
+            background: transparent; color: rgba(255, 255, 255, 0.7);
+            border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 14px;
+        }
+        .nav-btn.active { background: var(--primary); color: var(--slate-900); font-weight: bold; }
+        .btn-main {
+            background-color: var(--primary); color: var(--slate-900); border: none;
+            padding: 15px 40px; font-size: 24px; font-weight: 900; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transition: transform 0.2s; margin-top: 20px;
+        }
+        .btn-main:active { transform: scale(0.95); }
+        #game-world { display: none; flex: 1; position: relative; z-index: 20; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
+        #progress-container { display: none; width: 100%; height: 6px; background: #334155; z-index: 90; }
+        #progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+        .fairy { font-size: 50px; margin: 10px; }
+        .grid-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 20px; }
+        .opt-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: white; color: #0f172a; padding: 30px; border-radius: 25px; text-align: center; max-width: 350px; width: 100%; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="nav-header">
+            <button onclick="location.reload()" style="background:none; border:none; color:var(--primary); font-weight:bold; cursor:pointer;">🏰 בית</button>
+            <div class="nav-buttons">
+                <button onclick="switchLevel(0)" class="nav-btn" id="nb-0">יער</button>
+                <button onclick="switchLevel(1)" class="nav-btn" id="nb-1">גשר</button>
+                <button onclick="switchLevel(2)" class="nav-btn" id="nb-2">מכרה</button>
+                <button onclick="switchLevel(3)" class="nav-btn" id="nb-3">מקדש</button>
+            </div>
+            <div style="background:rgba(234,179,8,0.2); padding:2px 10px; border-radius:15px; border:1px solid var(--primary);">
+                <span id="points-display">0</span> ✨
+            </div>
+        </div>
+        <div id="progress-container"><div id="progress-bar"></div></div>
+        <div id="screen-start" class="screen castle-bg">
+            <h1 style="font-size: 45px; margin-bottom: 10px; color: var(--primary);">שומר המספרים</h1>
+            <p style="font-size: 18px; max-width: 300px;">עזרו לשומר להחזיר את האור לממלכה!</p>
+            <button class="btn-main" onclick="startGame()">התחל משחק</button>
+        </div>
+        <div id="game-world"></div>
+        <div id="success-modal" class="modal">
+            <div class="modal-content">
+                <div style="font-size: 50px;">🌟</div>
+                <h2 id="modal-title">כל הכבוד!</h2>
+                <p id="modal-msg"></p>
+                <button onclick="handleModalAction()" id="modal-btn" style="width:100%; padding:12px; background:#0f172a; color:white; border-radius:10px; border:none; font-weight:bold; cursor:pointer; margin-top:15px;">המשך</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let state = { level: 0, points: 0, exerciseNum: 1, targetValue: 0 };
+        function startGame() {
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('nav-header').style.display = 'flex';
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('game-world').style.display = 'flex';
+            loadLevel();
+        }
+        function switchLevel(lvl) { state.level = lvl; state.exerciseNum = 1; loadLevel(); }
+        function loadLevel() {
+            const world = document.getElementById('game-world');
+            document.getElementById('progress-bar').style.width = (state.exerciseNum - 1) * 10 + '%';
+            for(let i=0; i<4; i++) { document.getElementById('nb-'+i).className = (i === state.level) ? 'nav-btn active' : 'nav-btn'; }
+            world.innerHTML = '';
+            if (state.level === 0) setupLevel0(world);
+            else if (state.level === 1) setupLevel1(world);
+            else if (state.level === 2) setupLevel2(world);
+            else setupLevel3(world);
+        }
+        function setupLevel0(container) {
+            state.targetValue = Math.floor(Math.random() * 6) + 3;
+            let fairies = '<div style="display:flex; flex-wrap:wrap; justify-content:center;">';
+            for(let i=0; i<state.targetValue; i++) fairies += '<div class="fairy">🧚</div>';
+            fairies += '</div>';
+            container.innerHTML = fairies;
+            setTimeout(() => {
+                container.innerHTML = '<h2 style="margin-bottom:20px;">כמה פיות היו?</h2>';
+                const grid = document.createElement('div');
+                grid.className = 'grid-options';
+                for(let i=1; i<=10; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'opt-btn math-font'; btn.innerText = i;
+                    btn.onclick = () => check(i);
+                    grid.appendChild(btn);
+                }
+                container.appendChild(grid);
+            }, 1500);
+        }
+        function setupLevel1(container) {
+            const start = Math.floor(Math.random() * 50);
+            const missing = Math.floor(Math.random() * 3) + 1;
+            state.targetValue = start + (missing * 10);
+            let html = '<div style="display:flex; gap:10px; margin-bottom:30px;">';
+            for(let i=0; i<5; i++) {
+                const val = start + (i*10);
+                html += `<div style="width:50px; height:80px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; background:${i===missing?'#334155':'#2563eb'}; border:${i===missing?'2px dashed white':''}" class="math-font">${i===missing?'?':val}</div>`;
+            }
+            html += '</div>';
+            const options = [state.targetValue, state.targetValue+10, state.targetValue-10].sort(()=>Math.random()-0.5);
+            html += '<div style="display:flex; gap:10px;">';
+            options.forEach(o => { if(o >= 0) html += `<button onclick="check(${o})" class="opt-btn math-font" style="background:white; color:black; padding:10px 25px; border-radius:30px;">${o}</button>`; });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        function setupLevel2(container) {
+            state.targetValue = Math.floor(Math.random() * 150) + 20;
+            let current = 0;
+            container.innerHTML = `<h2 style="margin-bottom:10px;">חצבו: <span class="math-font" style="color:var(--primary)">${state.targetValue}</span></h2><div id="cur-val" class="math-font" style="font-size:40px; background:rgba(255,255,255,0.1); padding:10px 30px; border-radius:15px; margin-bottom:20px;">0</div><div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:20px;"><button onclick="window.addVal(100)" style="background:#2563eb; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold;">💰 100</button><button onclick="window.addVal(10)" style="background:#16a34a; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold;">📦 10</button><button onclick="window.addVal(1)" style="background:#dc2626; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold;">💎 1</button></div><button onclick="window.checkDec()" class="btn-main" style="font-size:18px; padding:10px 30px;">פתח דלת!</button>`;
+            window.addVal = (v) => { current += v; document.getElementById('cur-val').innerText = current; };
+            window.checkDec = () => { if(current === state.targetValue) handleCorrect(); else { current=0; document.getElementById('cur-val').innerText=0; } };
+        }
+        function setupLevel3(container) {
+            const v1 = Math.floor(Math.random() * 900) + 100;
+            const v2 = v1 + (Math.random() > 0.5 ? 10 : -10);
+            state.targetValue = Math.max(v1, v2);
+            container.innerHTML = `<p style="font-size:20px; margin-bottom:30px;">מי המספר הגדול יותר?</p><div style="display:flex; gap:30px;"><button onclick="check(${v1})" class="math-font" style="width:100px; height:100px; border-radius:50%; border:4px solid #475569; background:#1e293b; color:white; font-size:24px; font-weight:bold; cursor:pointer;">${v1}</button><button onclick="check(${v2})" class="math-font" style="width:100px; height:100px; border-radius:50%; border:4px solid #475569; background:#1e293b; color:white; font-size:24px; font-weight:bold; cursor:pointer;">${v2}</button></div>`;
+        }
+        function check(v) { if (v === state.targetValue) handleCorrect(); else loadLevel(); }
+        function handleCorrect() {
+            state.points += 10; document.getElementById('points-display').innerText = state.points;
+            const isEnd = state.exerciseNum >= 10;
+            document.getElementById('modal-msg').innerText = isEnd ? "סיימת את כל המשימות באזור זה!" : "התשובה נכונה!";
+            document.getElementById('modal-btn').innerText = isEnd ? (state.level < 3 ? "עבור לאזור הבא" : "סיים משחק") : "לתרגיל הבא";
+            document.getElementById('success-modal').style.display = 'flex';
+        }
+        function handleModalAction() {
+            document.getElementById('success-modal').style.display = 'none';
+            if (state.exerciseNum >= 10) {
+                if (state.level < 3) { state.level++; state.exerciseNum = 1; loadLevel(); }
+                else location.reload();
+            } else { state.exerciseNum++; loadLevel(); }
+        }
+    </script>
+</body>
+</html>
